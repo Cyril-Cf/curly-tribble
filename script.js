@@ -3,26 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const questionContainer = document.getElementById("questionContainer");
   const questionContent = document.getElementById("questionContent");
 
-  // Chargement des données
-  const questionsFile = "./questions.json";
-  const usersFile = "./users.json";
-
-  async function fetchJSON(file) {
-    const response = await fetch(file);
-    return await response.json();
+  function fetchJSONFromLocalStorage(key, fallback) {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : fallback;
   }
 
-  async function saveJSON(file, data) {
-    await fetch(file, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+  function saveJSONToLocalStorage(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
   }
 
-  userForm.addEventListener("submit", async (e) => {
+  userForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const firstName = e.target.firstName.value.trim();
@@ -33,9 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const users = await fetchJSON(usersFile);
-    const questions = await fetchJSON(questionsFile);
-
+    const users = fetchJSONFromLocalStorage("users", {});
     const userKey = `${firstName}_${lastName}`;
     let user = users[userKey];
 
@@ -45,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const availableQuestions = questions.filter(
-      (q) => !user.seenQuestions.includes(q.id)
+      (q) => !user.seenQuestions.some((seenQ) => seenQ.id === q.id)
     );
 
     if (availableQuestions.length === 0) {
@@ -56,10 +44,10 @@ document.addEventListener("DOMContentLoaded", () => {
           Math.floor(Math.random() * availableQuestions.length)
         ];
 
-      user.seenQuestions.push(randomQuestion.id);
+      user.seenQuestions.push(randomQuestion);
 
       // Sauvegarde des données utilisateur
-      await saveJSON(usersFile, users);
+      saveJSONToLocalStorage("users", users);
 
       // Affichage de la question
       questionContent.innerHTML = renderQuestion(randomQuestion);
@@ -69,12 +57,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderQuestion(question) {
     if (question.type === "technical") {
-      return `<p class="text-blue-600">${question.content}</p>`;
+      return `<div class='bg-blue-50 p-4 rounded border border-blue-200'>
+                <p class='text-blue-800 font-medium'>${escapeHTML(
+                  question.content
+                )}</p>
+              </div>`;
     } else if (question.type === "code_example") {
-      return `<pre class="bg-gray-100 p-4 rounded">${question.content}</pre>`;
+      return `<div class='bg-gray-50 p-4 rounded border border-gray-200'>
+                <p class='text-red-800 mb-2 font-medium'>${escapeHTML(
+                  question.content
+                )}</p>
+                <pre class='bg-gray-900 text-white p-4 rounded overflow-auto'><code>${escapeHTML(
+                  question.code_content
+                )}</code></pre>
+              </div>`;
     } else if (question.type === "code_correction") {
-      return `<p class="text-red-600">${question.content}</p>`;
+      return `<div class='bg-red-50 p-4 rounded border border-red-200'>
+                <p class='text-red-800 mb-2 font-medium'>${question.content}</p>
+                <pre class='bg-gray-900 text-white p-4 rounded overflow-auto'><code>${escapeHTML(
+                  question.code_content
+                )}</code></pre>
+              </div>`;
     }
-    return `<p>${question.content}</p>`;
+    return `<div class='bg-gray-50 p-4 rounded border border-gray-200'>
+              <p>${escapeHTML(question.content)}</p>
+            </div>`;
+  }
+
+  function escapeHTML(html) {
+    return html
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 });
