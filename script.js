@@ -2,6 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const userForm = document.getElementById("userForm");
   const questionContainer = document.getElementById("questionContainer");
   const questionContent = document.getElementById("questionContent");
+  const questionStatus = document.getElementById("questionStatus");
+  const questionsLeft = document.getElementById("questionsLeft");
 
   function fetchJSONFromLocalStorage(key, fallback) {
     const data = localStorage.getItem(key);
@@ -32,6 +34,13 @@ document.addEventListener("DOMContentLoaded", () => {
       users[userKey] = user;
     }
 
+    // Vérifier le nombre de questions déjà posées
+    if (user.seenQuestions.length >= 5) {
+      questionContent.innerHTML = "Vous avez déjà répondu à 5 questions.";
+      questionContainer.classList.remove("hidden");
+      return;
+    }
+
     const availableQuestions = questions.filter(
       (q) => !user.seenQuestions.some((seenQ) => seenQ.id === q.id)
     );
@@ -46,8 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       user.seenQuestions.push(randomQuestion);
 
-      // Sauvegarde des données utilisateur
+      // Sauvegarder les données utilisateur
       saveJSONToLocalStorage("users", users);
+
+      // Mettre à jour le nombre de questions restantes
+      const remainingQuestions = 5 - user.seenQuestions.length;
+      questionsLeft.innerHTML = `${remainingQuestions} question(s) restante(s)`;
 
       // Affichage de la question
       questionContent.innerHTML = renderQuestion(randomQuestion);
